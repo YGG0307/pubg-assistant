@@ -6,9 +6,9 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from typing import Optional
 
-import config
-from jizhan import JUMP_POINTS
-import window_manager
+from common import config
+from core.jizhan import JUMP_POINTS
+from core import window_manager
 
 
 class WeLiProGUI:

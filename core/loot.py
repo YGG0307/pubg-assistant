@@ -13,8 +13,8 @@ try:
 except ImportError:
     _HAS_TESSERACT = False
 
-import movement_control
-import key_action
+from core import movement_control
+from core import key_action
 
 
 # 物品优先级（越高越优先拾取）

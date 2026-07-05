@@ -10,23 +10,23 @@ from enum import Enum, auto
 import numpy as np
 from PIL import ImageGrab
 
-import config
-import signals
-import single_instance
-import window_manager
-import start_game
-import flight_path
-import jizhan
-import movement_control
-import key_action
-import loot
-import safe_zone
-import ocr_region
-import end_game
-import game_timeout
-import error_clicker
-import feishu_reporter
-import digit_debug
+from common import config
+from common import signals
+from common import single_instance
+from common import feishu_reporter
+from common import digit_debug
+from core import window_manager
+from core import start_game
+from core import flight_path
+from core import jizhan
+from core import movement_control
+from core import key_action
+from core import loot
+from core import safe_zone
+from core import ocr_region
+from core import end_game
+from core import game_timeout
+from core import error_clicker
 
 
 class GameState(Enum):

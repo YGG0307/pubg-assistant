@@ -6,7 +6,7 @@ import os
 import cv2
 import numpy as np
 from typing import Optional
-from utils import get_resource_path
+from common.utils import get_resource_path
 
 
 # 模板缓存

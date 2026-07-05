@@ -17,7 +17,7 @@ pip install -r requirements.txt
 python main.py
 
 # GUI 设置面板
-python menu.py
+python -m ui.menu
 ```
 
 ## 功能
@@ -36,30 +36,38 @@ python menu.py
 
 ```
 wlpro/
-├── main.py              # 入口 + 8 状态主状态机
-├── menu.py              # tkinter GUI 设置面板
-├── signals.py           # 事件总线（发布/订阅）
-├── config.py            # 配置管理（dataclass + JSON）
-├── single_instance.py   # 单实例锁（Win32 Mutex）
-├── window_manager.py    # 游戏窗口查找/绑定/激活
-├── start_game.py        # 模板匹配检测开始按钮
-├── flight_path.py       # 跳伞距离计算 + 路径规划
-├── jizhan.py            # 20 个跳点坐标 + 策略选择
-├── movement_control.py  # WASD 移动 + 平滑鼠标（pytweening）
-├── key_action.py        # 20+ 键位映射（射击/换弹/开镜等）
-├── loot.py              # 30+ 物品优先级 + OCR 识别拾取
-├── safe_zone.py         # 小地图霍夫圆毒圈检测
-├── ocr_region.py        # 击杀/存活/排名/倒计时 OCR
-├── end_game.py          # 结算画面检测 + 返回大厅
-├── game_timeout.py      # 画面卡死 + 数据超时双重检测
-├── error_clicker.py     # 弹窗类型识别（网络/踢出/更新）
-├── feishu_reporter.py   # 飞书交互式卡片消息
-├── digit_debug.py       # 日志 + 截图保存 + 检测框可视化
-├── utils.py             # 资源路径 + 时间戳 + 目录创建
-├── requirements.txt     # 依赖清单
-├── templates/           # 模板图片（开始按钮、结算画面等）
-├── config.json          # 配置文件
-└── logs/                # 日志目录
+├── main.py                  # 程序入口
+├── core/                    # 核心游戏逻辑
+│   ├── window_manager.py    # 游戏窗口查找/绑定/激活
+│   ├── start_game.py        # 模板匹配检测开始按钮
+│   ├── flight_path.py       # 跳伞距离计算 + 路径规划
+│   ├── jizhan.py            # 20 个跳点坐标 + 策略选择
+│   ├── movement_control.py  # WASD 移动 + 平滑鼠标（pytweening）
+│   ├── key_action.py        # 20+ 键位映射（射击/换弹/开镜等）
+│   ├── loot.py              # 30+ 物品优先级 + OCR 识别拾取
+│   ├── safe_zone.py         # 小地图霍夫圆毒圈检测
+│   ├── ocr_region.py        # 击杀/存活/排名/倒计时 OCR
+│   ├── end_game.py          # 结算画面检测 + 返回大厅
+│   ├── game_timeout.py      # 画面卡死 + 数据超时双重检测
+│   └── error_clicker.py     # 弹窗类型识别（网络/踢出/更新）
+├── common/                  # 公共模块
+│   ├── signals.py           # 事件总线（发布/订阅）
+│   ├── config.py            # 配置管理（dataclass + JSON）
+│   ├── single_instance.py   # 单实例锁（Win32 Mutex）
+│   ├── feishu_reporter.py   # 飞书交互式卡片消息
+│   ├── digit_debug.py       # 日志 + 截图保存 + 检测框可视化
+│   └── utils.py             # 资源路径 + 时间戳 + 目录创建
+├── ui/                      # 用户界面
+│   └── menu.py              # tkinter GUI 设置面板
+├── templates/               # 模板图片（开始按钮、结算画面等）
+├── config.json              # 配置文件
+├── logs/                    # 日志目录
+├── debug_screenshots/       # 调试截图
+├── requirements.txt
+├── RuntimeBrokerHost.spec   # PyInstaller 打包配置
+├── README.md
+├── PROGRESS.md              # 开发进度文档
+└── CLAUDE.md                # 项目上下文
 ```
 
 ## 状态机

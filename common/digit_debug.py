@@ -7,7 +7,7 @@ import logging
 import cv2
 import numpy as np
 from datetime import datetime
-from utils import ensure_dir, timestamp
+from common.utils import ensure_dir, timestamp
 
 
 def setup_logging(debug: bool = False) -> None:

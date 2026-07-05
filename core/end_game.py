@@ -8,9 +8,9 @@ import time
 import re
 from typing import Optional
 
-import ocr_region
-import key_action
-import movement_control
+from core import ocr_region
+from core import key_action
+from core import movement_control
 
 
 def detect_game_over(screenshot: np.ndarray) -> bool:

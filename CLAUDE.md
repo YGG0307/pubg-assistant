@@ -17,8 +17,10 @@
 
 ## 关键文件
 
-- main.py — 入口 + 主状态机
-- menu.py — tkinter GUI
+- main.py — 程序入口
+- core/ — 核心游戏逻辑（状态机、窗口管理、图像识别、键鼠模拟等）
+- common/ — 公共模块（信号、配置、通知、调试等）
+- ui/menu.py — tkinter GUI
 - 详见 PROGRESS.md
 
 ## 注意事项

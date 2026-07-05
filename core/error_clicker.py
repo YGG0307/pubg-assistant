@@ -7,7 +7,7 @@ import numpy as np
 import time
 from typing import Optional
 
-import key_action
+from core import key_action
 
 
 def detect_error_dialog(screenshot: np.ndarray) -> Optional[str]:
