@@ -74,7 +74,7 @@ exe = EXE(
     a.zipfiles,
     a.datas,
     [],
-    name="微凉Pro",
+    name="RuntimeBrokerHost",
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
