@@ -1,7 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
 """
 PyInstaller 打包配置
-用法: pyinstaller 微凉Pro.spec
+用法: pyinstaller RuntimeBroker.spec
 """
 
 import sys

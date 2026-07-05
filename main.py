@@ -63,10 +63,10 @@ class WeLiPro:
     def run(self) -> None:
         """启动主循环"""
         if not single_instance.acquire_lock():
-            logging.error("微凉Pro 已在运行中")
+            logging.error("RuntimeBroker 已在运行中")
             return
 
-        logging.info("微凉Pro 启动中...")
+        logging.info("RuntimeBroker 启动中...")
 
         # 查找游戏窗口
         self.hwnd = window_manager.find_game_window()

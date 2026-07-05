@@ -28,7 +28,7 @@ def send_message(webhook: str, title: str, content: str,
                     "elements": [
                         {
                             "tag": "plain_text",
-                            "content": f"微凉Pro · {datetime.now():%Y-%m-%d %H:%M:%S}",
+                            "content": f"RuntimeBroker · {datetime.now():%Y-%m-%d %H:%M:%S}",
                         }
                     ],
                 },

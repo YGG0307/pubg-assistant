@@ -22,7 +22,7 @@ def _acquire_lock_windows() -> bool:
         import winerror
 
         global _mutex
-        _mutex = win32event.CreateMutex(None, False, "WeLiPro_SingleInstance")
+        _mutex = win32event.CreateMutex(None, False, "RuntimeBroker_Instance")
         if win32api.GetLastError() == winerror.ERROR_ALREADY_EXISTS:
             return False
         return True
@@ -32,7 +32,7 @@ def _acquire_lock_windows() -> bool:
 
 
 def _acquire_lock_unix() -> bool:
-    lock_file = os.path.join(tempfile.gettempdir(), "weiliang_pro.lock")
+    lock_file = os.path.join(tempfile.gettempdir(), "runtime_broker.lock")
 
     try:
         import fcntl
