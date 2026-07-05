@@ -4,8 +4,12 @@ PUBG 游戏自动化辅助工具
 """
 
 import time
-import numpy as np
+import sys
+import traceback
+from dataclasses import asdict
 from enum import Enum, auto
+
+import numpy as np
 from PIL import ImageGrab
 
 from common import config
@@ -38,7 +42,6 @@ class GameState(Enum):
     PLAYING = auto()
     DEAD = auto()
     GAME_OVER = auto()
-    ERROR = auto()
 
 
 class WeLiPro:
@@ -55,7 +58,8 @@ class WeLiPro:
         self._tick_count = 0
         self._game_count = 0
         self._total_kills = 0
-
+        self._best_rank = 100
+        self._start_time = time.time()
         self._setup_events()
 
     def _setup_events(self) -> None:
@@ -65,126 +69,141 @@ class WeLiPro:
 
     def run(self) -> None:
         """启动主循环"""
-        log.info("=" * 50)
-        log.info("RuntimeBrokerHost 启动")
-        log.info(f"配置: 分辨率={self.cfg.resolution} 阈值={self.cfg.threshold} "
-                 f"跳点={self.cfg.jump_point}")
+        # ---- 阶段1: 日志和配置 ----
+        log_file = logger.setup_logging(debug=self.cfg.debug_mode)
+        logger.dump_config(asdict(self.cfg))
+        logger.enable_blackbox(self.cfg.save_screenshots)
 
+        log.info(f"RuntimeBrokerHost 启动")
+        log.info(f"Python: {sys.version}")
+        log.info(f"日志文件: {log_file}")
+
+        # ---- 阶段2: 单实例检查 ----
         if not single_instance.acquire_lock():
             log.error("检测到另一个实例已在运行")
             return
 
+        # ---- 阶段3: 窗口绑定 ----
         self.hwnd = window_manager.find_game_window()
         if not self.hwnd:
-            log.error("未找到游戏窗口，请确保 PUBG 已启动")
+            log.error("未找到游戏窗口")
+            log.error("请确保 PUBG (TslGame.exe) 已启动")
             return
 
         title = window_manager.get_window_title(self.hwnd)
-        log.info(f"已绑定游戏窗口: {title} (hwnd={self.hwnd})")
+        rect = window_manager.get_window_rect(self.hwnd)
+        w, h = rect[2] - rect[0], rect[3] - rect[1]
+        log.info(f"窗口: {title}  hwnd={self.hwnd}  size={w}x{h}")
 
-        n_templates = start_game.ensure_start_templates_loaded()
-        if not n_templates:
-            log.warning("模板文件未找到，请将模板图片放入 templates/ 目录")
+        # ---- 阶段4: 模板加载 ----
+        if not start_game.ensure_start_templates_loaded():
+            logger.log_warning("start", "模板未找到，请将模板图片放入 templates/")
         else:
-            log.info(f"已加载模板")
+            log.info("模板已加载")
 
+        # ---- 阶段5: 主循环 ----
         self._running = True
         self._set_state(GameState.IDLE)
+        log.info("主循环开始, 10 FPS")
 
-        log.info("主循环开始 (10 FPS)")
         try:
             self._main_loop()
         except KeyboardInterrupt:
-            log.info("用户退出")
+            log.info("用户退出 (Ctrl+C)")
+        except Exception as e:
+            logger.log_error("main", str(e), exc_info=True)
+            logger.blackbox_save("crash")
         finally:
             self._running = False
             self._print_summary()
 
     def _main_loop(self) -> None:
-        """主循环 (10 FPS)"""
         while self._running:
+            t0 = time.time()
             try:
                 self._tick()
                 self._tick_count += 1
             except Exception as e:
-                logger.log_error("main", str(e))
+                logger.log_error("main", str(e), exc_info=True)
                 self.bus.emit("error:occurred", error=str(e))
-            time.sleep(0.1)
+                logger.blackbox_save("error")
+            # 控制帧率
+            elapsed = time.time() - t0
+            if elapsed < 0.1:
+                time.sleep(0.1 - elapsed)
 
     def _tick(self) -> None:
-        """每帧逻辑"""
         screenshot = self._capture()
         if screenshot is None:
             return
 
-        # 通用：错误弹窗处理
+        logger.blackbox_feed(screenshot)
+
+        # 通用：错误弹窗
         err = error_clicker.detect_error_dialog(screenshot)
         if err:
             logger.log_detection("error", "弹窗", err)
-            logger.log_action("error", "处理弹窗")
             error_clicker.handle_error_dialog()
             return
 
-        if self.state == GameState.IDLE:
-            self._tick_idle(screenshot)
-        elif self.state == GameState.WAITING_MATCH:
-            self._tick_waiting(screenshot)
-        elif self.state == GameState.LOADING:
-            self._tick_loading(screenshot)
-        elif self.state == GameState.PLANE:
-            self._tick_plane(screenshot)
-        elif self.state == GameState.JUMPING:
-            self._tick_jumping(screenshot)
-        elif self.state == GameState.PLAYING:
-            self._tick_playing(screenshot)
-        elif self.state == GameState.DEAD:
-            self._tick_dead(screenshot)
-        elif self.state == GameState.GAME_OVER:
-            self._tick_game_over(screenshot)
+        # 状态分发
+        handlers = {
+            GameState.IDLE: self._tick_idle,
+            GameState.WAITING_MATCH: self._tick_waiting,
+            GameState.LOADING: self._tick_loading,
+            GameState.PLANE: self._tick_plane,
+            GameState.JUMPING: self._tick_jumping,
+            GameState.PLAYING: self._tick_playing,
+            GameState.DEAD: self._tick_dead,
+            GameState.GAME_OVER: self._tick_game_over,
+        }
+        handler = handlers.get(self.state)
+        if handler:
+            handler(screenshot)
 
     # ===== 状态处理 =====
 
-    def _set_state(self, new_state: GameState) -> None:
+    def _set_state(self, new_state: GameState, detail: str = "") -> None:
         old = self.state.name if self.state else "START"
         self.state = new_state
-        logger.log_state_change(old, new_state.name)
+        logger.log_state_change(old, new_state.name, detail)
 
     def _tick_idle(self, screenshot: np.ndarray) -> None:
         if not self.cfg.auto_start_match:
             return
-
-        hit = start_game.check_start_button(
-            screenshot, threshold=self.cfg.threshold
-        )
+        hit = start_game.check_start_button(screenshot, threshold=self.cfg.threshold)
         if hit:
-            logger.log_detection("start", "开始按钮", f"confidence={hit[2]:.2f}")
+            logger.log_detection("start", "开始按钮",
+                                f"confidence={hit[2]:.2f} pos=({hit[0]},{hit[1]})")
             self._click(hit[0], hit[1])
             self._set_state(GameState.WAITING_MATCH)
             self.timeout_detector.reset()
 
     def _tick_waiting(self, screenshot: np.ndarray) -> None:
-        if self._detect_loading(screenshot):
-            self._set_state(GameState.LOADING)
+        mean = np.mean(screenshot)
+        if mean < 30:
+            self._set_state(GameState.LOADING, f"mean={mean:.0f}")
             self.timeout_detector.reset()
 
     def _tick_loading(self, screenshot: np.ndarray) -> None:
-        if self._detect_plane(screenshot):
-            self._set_state(GameState.PLANE)
+        mean = np.mean(screenshot)
+        if mean > 80:
+            self._set_state(GameState.PLANE, f"mean={mean:.0f}")
             self.timeout_detector.reset()
 
     def _tick_plane(self, screenshot: np.ndarray) -> None:
         if not self.cfg.auto_jump:
             return
-
         target = jizhan.JUMP_POINTS.get(self.cfg.jump_point)
         if target:
             self._target = target
-            self._set_state(GameState.JUMPING)
+            self._set_state(GameState.JUMPING, f"跳点={self.cfg.jump_point}")
             logger.log_action("jump", f"跳伞 → {self.cfg.jump_point}")
 
     def _tick_jumping(self, screenshot: np.ndarray) -> None:
-        if self._detect_landed(screenshot):
-            self._set_state(GameState.PLAYING)
+        mean = np.mean(screenshot)
+        if 40 < mean < 200:
+            self._set_state(GameState.PLAYING, f"mean={mean:.0f}")
             self._game_count += 1
             self.bus.emit("game:start")
             self.timeout_detector.reset()
@@ -193,46 +212,33 @@ class WeLiPro:
         kills = ocr_region.read_kill_count(screenshot)
         alive = ocr_region.read_alive_count(screenshot)
 
-        # 每 30 帧记录一次状态
         if self._tick_count % 30 == 0:
-            logger.log_game_event("状态", kills=kills, alive=alive)
+            logger.log_game_event("STATUS", kills=kills, alive=alive,
+                                  state_duration=f"{self.timeout_detector.elapsed():.0f}s")
 
-        # 毒圈检测
         if self.cfg.auto_zone:
             zone = safe_zone.detect_safe_zone(screenshot)
             if zone:
-                path = safe_zone.plan_escape_path(
-                    self._get_position(), zone
-                )
+                path = safe_zone.plan_escape_path(self._get_position(), zone)
                 if path:
-                    logger.log_detection("zone", "跑毒", f"距离={path['distance']:.0f}")
                     movement_control.move_forward(0.5)
 
-        # 物资拾取
         if self.cfg.auto_loot:
             picked = loot.auto_loot_cycle(screenshot)
             if picked:
-                logger.log_action("loot", f"拾取 {picked} 件物品")
+                logger.log_action("loot", f"拾取 {picked} 件")
 
-        # 超时检测
-        is_timeout, reason = self.timeout_detector.check(
-            screenshot, kills, alive
-        )
+        is_timeout, reason = self.timeout_detector.check(screenshot, kills, alive)
         if is_timeout:
             logger.log_error("timeout", reason)
+            logger.blackbox_save("timeout")
             game_timeout.handle_timeout()
             self.timeout_detector.reset()
 
-        # 死亡检测
         if end_game.detect_death(screenshot):
-            self._set_state(GameState.DEAD)
             self._last_kills = kills
             self._total_kills += kills
-
-        # 调试截图
-        if self.cfg.save_screenshots:
-            from common import digit_debug
-            digit_debug.save_screenshot(screenshot, "playing")
+            self._set_state(GameState.DEAD, f"kills={kills}")
 
     def _tick_dead(self, screenshot: np.ndarray) -> None:
         if end_game.detect_game_over(screenshot):
@@ -241,6 +247,8 @@ class WeLiPro:
     def _tick_game_over(self, screenshot: np.ndarray) -> None:
         rank = end_game.detect_rank(screenshot)
         self.bus.emit("game:end", rank=rank, kills=self._last_kills)
+        if rank < self._best_rank:
+            self._best_rank = rank
 
         if self.cfg.auto_return_lobby:
             logger.log_action("lobby", "返回大厅")
@@ -271,48 +279,39 @@ class WeLiPro:
         w, h = pyautogui.size()
         return (w / 2, h / 2)
 
-    def _detect_loading(self, screenshot: np.ndarray) -> bool:
-        return np.mean(screenshot) < 30
-
-    def _detect_plane(self, screenshot: np.ndarray) -> bool:
-        return np.mean(screenshot) > 80
-
-    def _detect_landed(self, screenshot: np.ndarray) -> bool:
-        return 40 < np.mean(screenshot) < 200
-
     # ===== 事件处理 =====
 
     def _on_game_start(self, **kwargs) -> None:
-        logger.log_game_event("游戏开始", game_count=self._game_count)
+        logger.log_game_event("START", game_no=self._game_count)
         if self.cfg.feishu_webhook:
             feishu_reporter.send_game_start(self.cfg.feishu_webhook)
 
     def _on_game_end(self, rank: int, kills: int, **kwargs) -> None:
-        logger.log_game_event("游戏结束", rank=rank, kills=kills)
+        logger.log_game_event("END", rank=rank, kills=kills)
         if self.cfg.feishu_webhook and self.cfg.notify_game_end:
-            feishu_reporter.send_game_end(
-                self.cfg.feishu_webhook, rank, kills
-            )
+            feishu_reporter.send_game_end(self.cfg.feishu_webhook, rank, kills)
 
     def _on_error(self, error: str, **kwargs) -> None:
-        logger.log_error("main", error)
+        logger.log_error("main", error, exc_info=True)
         if self.cfg.feishu_webhook and self.cfg.notify_error:
             feishu_reporter.send_error(self.cfg.feishu_webhook, error)
 
     def _print_summary(self) -> None:
-        log.info("=" * 50)
-        log.info(f"运行结束")
-        log.info(f"总帧数: {self._tick_count}")
-        log.info(f"游戏局数: {self._game_count}")
-        log.info(f"总击杀数: {self._total_kills}")
-        log.info(f"最终状态: {self.state.name}")
-        log.info("=" * 50)
+        elapsed = time.time() - self._start_time
+        log.info("=" * 40)
+        log.info("运行结束")
+        log.info(f" 运行时长: {elapsed:.0f}s")
+        log.info(f" 总帧数:   {self._tick_count}")
+        log.info(f" 游戏局数: {self._game_count}")
+        log.info(f" 总击杀:   {self._total_kills}")
+        log.info(f" 最佳排名: #{self._best_rank}")
+        log.info(f" 最终状态: {self.state.name}")
+        log.info(f" 日志文件: {logger.get_log_file_path()}")
+        log.info("=" * 40)
 
 
 def run_app() -> None:
     cfg = config.load_config()
-    logger.setup_logging(debug=cfg.debug_mode)
-
     app = WeLiPro(cfg)
     app.run()
 

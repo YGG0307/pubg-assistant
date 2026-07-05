@@ -56,20 +56,19 @@ class GameTimeoutDetector:
         self._same_frame_count = 0
         self._last_screenshot = None
 
+    def elapsed(self) -> float:
+        """距离上次状态变化的时间（秒）"""
+        return time.time() - self._last_change
+
 
 def handle_timeout() -> None:
     """处理卡死：ESC → 返回大厅 → 重新开始"""
-    import key_action
+    from core import key_action
     import time
 
-    # 按 ESC
     key_action.press("esc")
     time.sleep(2.0)
-
-    # 再按一次 ESC
     key_action.press("esc")
     time.sleep(2.0)
-
-    # 确认弹窗
     key_action.press("enter")
     time.sleep(5.0)
