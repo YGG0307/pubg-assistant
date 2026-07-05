@@ -1,0 +1,32 @@
+# 微凉Pro
+
+*.pyc
+__pycache__/
+*.pyo
+
+# 日志
+logs/
+*.log
+
+# 调试截图
+debug_screenshots/
+
+# 配置（本地）
+config.json
+
+# 系统
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# 打包
+build/
+dist/
+*.spec
+
+# 模板图片（太大，单独管理）
+templates/*.png
+templates/**/*.png
