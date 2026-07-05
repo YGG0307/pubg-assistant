@@ -139,6 +139,7 @@ def blackbox_feed(screenshot: np.ndarray) -> None:
 def blackbox_save(label: str = "error") -> list[str]:
     """保存黑匣子截图，返回文件路径列表"""
     if not _blackbox:
+        get_logger("blackbox").info(f"黑匣子为空，无截图保存: {label}")
         return []
 
     ensure_dir("debug_screenshots")
@@ -149,7 +150,10 @@ def blackbox_save(label: str = "error") -> list[str]:
         cv2.imwrite(path, img)
         paths.append(path)
 
-    get_logger("blackbox").info(f"保存 {len(paths)} 帧黑匣子截图: {label}")
+    get_logger("blackbox").info(
+        f"黑匣子: {label} 共{len(paths)}帧 "
+        f"范围: {paths[0]} ~ {paths[-1]}"
+    )
     _blackbox.clear()
     return paths
 
