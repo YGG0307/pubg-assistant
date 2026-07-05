@@ -98,18 +98,18 @@ loot.py:            LOOT_PRIORITY 物品优先级
 
 ## 测试顺序
 
-1. `python menu.py` — GUI 能否打开
-2. `python -c "import window_manager; print(window_manager.find_game_window())"` — 找窗口
-3. `python -c "import start_game; print(start_game.ensure_start_templates_loaded())"` — 加载模板
-4. `python -c "import movement_control; movement_control.move_forward(0.5)"` — 键鼠模拟
-5. `python -c "import ocr_region; print(ocr_region.read_text(cv2.imread('test.png')))"` — OCR
+1. `python -m ui.menu` — GUI 能否打开
+2. `python -c "from core import window_manager; print(window_manager.find_game_window())"` — 找窗口
+3. `python -c "from core import start_game; print(start_game.ensure_start_templates_loaded())"` — 加载模板
+4. `python -c "from core import movement_control; movement_control.move_forward(0.5)"` — 键鼠模拟
+5. `python -c "import cv2; from core import ocr_region; print(ocr_region.read_text(cv2.imread('test.png')))"` — OCR
 6. `python main.py` — 完整流程（需要 PUBG 在运行）
 
 ## 参考文档
 
-逆向分析产生的文档在 `YGG0307/WLPro` 仓库：
-- REVERSE_ENGINEERING.md — 完整逆向过程记录
-- IMPLEMENTATION_GUIDE.md — 各模块实现推断指南
+逆向分析产生的文档在 https://github.com/YGG0307/WLPro 仓库（master 分支）：
+- [REVERSE_ENGINEERING.md](https://github.com/YGG0307/WLPro/blob/master/REVERSE_ENGINEERING.md) — 完整逆向过程记录（381 行）
+- [IMPLEMENTATION_GUIDE.md](https://github.com/YGG0307/WLPro/blob/master/IMPLEMENTATION_GUIDE.md) — 各模块实现推断指南（1254 行）
 
 ## 下一步
 
